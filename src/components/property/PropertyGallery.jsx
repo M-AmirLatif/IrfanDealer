@@ -3,7 +3,7 @@ import { Camera, Video as VideoIcon, Maximize2, ChevronLeft, ChevronRight } from
 import Lightbox from './Lightbox';
 import VideoPlayer from './VideoPlayer';
 
-export default function PropertyGallery({ images = [], video = null, className = '' }) {
+export default function PropertyGallery({ images = [], video = null, coverImage = '', className = '' }) {
   const [activeMedia, setActiveMedia] = useState('photos'); // 'photos' | 'video'
   const [activeImageIndex, setActiveImageIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
@@ -11,12 +11,34 @@ export default function PropertyGallery({ images = [], video = null, className =
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
+  // Normalize images: supports both string URLs and { url, alt } objects, plus coverImage fallback
+  const rawList = Array.isArray(images) && images.length > 0 
+    ? images 
+    : (coverImage ? [coverImage] : []);
+
+  const normalizedImages = rawList
+    .map((img, idx) => {
+      if (!img) return null;
+      if (typeof img === 'string') {
+        return { url: img, alt: `Property photo ${idx + 1}` };
+      }
+      return {
+        url: img.url || img.src || '',
+        alt: img.alt || `Property photo ${idx + 1}`,
+      };
+    })
+    .filter((img) => Boolean(img && img.url));
+
+  const safeImages = normalizedImages.length > 0 
+    ? normalizedImages 
+    : [{ url: '/placeholder-house.webp', alt: 'Property preview photo' }];
+
   const handleNext = () => {
-    setActiveImageIndex((prev) => (prev === images.length - 1 ? 0 : prev + 1));
+    setActiveImageIndex((prev) => (prev === safeImages.length - 1 ? 0 : prev + 1));
   };
 
   const handlePrev = () => {
-    setActiveImageIndex((prev) => (prev === 0 ? images.length - 1 : prev - 1));
+    setActiveImageIndex((prev) => (prev === 0 ? safeImages.length - 1 : prev - 1));
   };
 
   // Touch swipe support for main preview image
@@ -35,7 +57,7 @@ export default function PropertyGallery({ images = [], video = null, className =
     }
   };
 
-  const currentImage = images[activeImageIndex] || { url: '', alt: '' };
+  const currentImage = safeImages[activeImageIndex] || safeImages[0];
 
   return (
     <div className={`space-y-3 ${className}`}>
@@ -52,7 +74,7 @@ export default function PropertyGallery({ images = [], video = null, className =
             }`}
           >
             <Camera className="w-4 h-4" />
-            <span>Photos ({images.length})</span>
+            <span>Photos ({safeImages.length})</span>
           </button>
 
           <button
@@ -96,7 +118,7 @@ export default function PropertyGallery({ images = [], video = null, className =
               <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/60 backdrop-blur-xs text-xs font-bold text-white border border-white/20">
                 <Camera className="w-3.5 h-3.5" />
                 <span>
-                  {activeImageIndex + 1} / {images.length}
+                  {activeImageIndex + 1} / {safeImages.length}
                 </span>
               </span>
             </div>
@@ -110,31 +132,33 @@ export default function PropertyGallery({ images = [], video = null, className =
             </div>
 
             {/* Previous & Next Arrows on main image */}
-            <div className="absolute inset-y-0 left-2 right-2 flex items-center justify-between pointer-events-none">
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handlePrev();
-                }}
-                className="pointer-events-auto w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center transition-colors focus:outline-none"
-                aria-label="Previous photo"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
+            {safeImages.length > 1 && (
+              <div className="absolute inset-y-0 left-2 right-2 flex items-center justify-between pointer-events-none">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrev();
+                  }}
+                  className="pointer-events-auto w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center transition-colors focus:outline-none"
+                  aria-label="Previous photo"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
 
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleNext();
-                }}
-                className="pointer-events-auto w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center transition-colors focus:outline-none"
-                aria-label="Next photo"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNext();
+                  }}
+                  className="pointer-events-auto w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white flex items-center justify-center transition-colors focus:outline-none"
+                  aria-label="Next photo"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
 
             {/* Alt text overlay at bottom */}
             {currentImage.alt && (
@@ -145,13 +169,13 @@ export default function PropertyGallery({ images = [], video = null, className =
           </div>
 
           {/* Thumbnail Strip (Scrollable) */}
-          {images.length > 1 && (
+          {safeImages.length > 1 && (
             <div className="flex gap-2.5 overflow-x-auto no-scrollbar py-1">
-              {images.map((img, idx) => (
+              {safeImages.map((img, idx) => (
                 <button
                   key={idx}
                   type="button"
-                  aria-label={`View photo ${idx + 1} of ${images.length}`}
+                  aria-label={`View photo ${idx + 1} of ${safeImages.length}`}
                   onClick={() => setActiveImageIndex(idx)}
                   className={`relative w-20 sm:w-24 aspect-[4/3] rounded-xl overflow-hidden shrink-0 border-2 transition-all ${
                     idx === activeImageIndex
@@ -169,7 +193,7 @@ export default function PropertyGallery({ images = [], video = null, className =
 
       {/* Lightbox Modal */}
       <Lightbox
-        images={images}
+        images={safeImages}
         initialIndex={activeImageIndex}
         isOpen={lightboxOpen}
         onClose={() => setLightboxOpen(false)}
