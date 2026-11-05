@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, Link, useLocation } from 'react-router-dom';
-import { Phone, MessageCircle, Menu, X, Clock, MapPin } from 'lucide-react';
+import { Phone, MessageCircle, Menu, X, Clock, MapPin, Lock } from 'lucide-react';
 import BrandLogo from '../common/BrandLogo';
 import { SITE_CONFIG } from '../../data/siteConfig';
 import { NAV_LINKS } from '../../constants/routes';
@@ -61,6 +61,13 @@ export default function Header() {
             </span>
           </div>
           <div className="flex items-center gap-4">
+            <Link
+              to="/admin"
+              className="font-semibold text-emerald-300 hover:text-white transition-colors flex items-center gap-1.5 bg-emerald-950/80 hover:bg-emerald-900 px-3 py-1 rounded-md border border-emerald-500/40 text-[11px]"
+            >
+              <Lock className="w-3 h-3 text-emerald-400" />
+              Dealer Portal
+            </Link>
             <span className="text-slate-400">Direct Inquiries:</span>
             <a
               href={buildTelLink(SITE_CONFIG.phoneRaw)}
@@ -115,7 +122,16 @@ export default function Header() {
             </nav>
 
             {/* Desktop Action Buttons */}
-            <div className="hidden lg:flex items-center gap-3">
+            <div className="hidden lg:flex items-center gap-2.5">
+              <Link
+                to="/admin"
+                className="inline-flex items-center gap-1.5 px-3 py-2.5 rounded-btn text-xs font-bold text-slate-800 bg-slate-100 hover:bg-slate-200 border border-slate-300 transition-colors min-h-tap"
+                title="Dealer Portal Login"
+              >
+                <Lock className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Dealer Login</span>
+              </Link>
+
               <a
                 href={buildWhatsAppLink(
                   SITE_CONFIG.whatsappNumber,
@@ -142,6 +158,15 @@ export default function Header() {
 
             {/* Mobile Actions: Call Button & Hamburger */}
             <div className="flex items-center gap-1.5 sm:gap-2 lg:hidden shrink-0">
+              <Link
+                to="/admin"
+                className="flex items-center gap-1 px-2.5 py-2 rounded-btn bg-emerald-50 text-emerald-900 hover:bg-emerald-100 border border-emerald-300 text-xs font-bold transition-colors"
+                title="Dealer Login"
+              >
+                <Lock className="w-3.5 h-3.5 text-emerald-700" />
+                <span>Login</span>
+              </Link>
+
               <a
                 href={buildTelLink(SITE_CONFIG.phoneRaw)}
                 className="flex items-center justify-center w-10 h-10 sm:w-11 sm:h-11 rounded-btn bg-primary-50 text-primary-900 hover:bg-primary-100 border border-primary-200 transition-colors"
@@ -224,6 +249,15 @@ export default function Header() {
 
         {/* Drawer Footer Actions */}
         <div className="p-4 sm:p-5 border-t border-slate-100 bg-slate-50 space-y-3">
+          <Link
+            to="/admin"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center justify-center gap-2 w-full py-2.5 px-4 rounded-btn bg-emerald-50 text-emerald-900 border border-emerald-300 font-bold text-sm hover:bg-emerald-100 transition-colors"
+          >
+            <Lock className="w-4 h-4 text-emerald-700" />
+            <span>Dealer Admin Login</span>
+          </Link>
+
           <a
             href={buildTelLink(SITE_CONFIG.phoneRaw)}
             className="flex items-center justify-center gap-2.5 w-full py-3.5 px-4 rounded-btn bg-primary-900 hover:bg-primary-800 text-white font-bold text-base shadow transition-colors min-h-tap"
