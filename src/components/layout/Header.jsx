@@ -6,6 +6,23 @@ import { SITE_CONFIG } from '../../data/siteConfig';
 import { NAV_LINKS } from '../../constants/routes';
 import { buildTelLink, buildWhatsAppLink } from '../../utils/linkUtils';
 
+function isLinkActive(linkPath, currentPathname, currentSearch) {
+  if (linkPath === '/') {
+    return currentPathname === '/';
+  }
+  if (linkPath.includes('?')) {
+    const [path, query] = linkPath.split('?');
+    if (currentPathname !== path) return false;
+    const targetParams = new URLSearchParams(query);
+    const currentParams = new URLSearchParams(currentSearch);
+    for (const [key, val] of targetParams.entries()) {
+      if (currentParams.get(key) !== val) return false;
+    }
+    return true;
+  }
+  return currentPathname === linkPath || currentPathname.startsWith(linkPath + '/');
+}
+
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -94,29 +111,20 @@ export default function Header() {
             {/* Desktop Navigation Links */}
             <nav className="hidden lg:flex items-center gap-1" aria-label="Main Navigation">
               {NAV_LINKS.map((link) => {
-                const isExactActive =
-                  location.pathname === link.path ||
-                  (link.path.includes('?') && location.pathname + location.search === link.path);
+                const active = isLinkActive(link.path, location.pathname, location.search);
 
                 return (
-                  <NavLink
+                  <Link
                     key={link.label}
                     to={link.path}
-                    className={({ isActive }) => {
-                      const active =
-                        isExactActive ||
-                        (link.path === '/'
-                          ? location.pathname === '/'
-                          : isActive && !link.path.includes('?'));
-                      return `px-3.5 py-2 rounded-lg text-[15px] font-semibold transition-all duration-150 min-h-tap flex items-center ${
-                        active
-                          ? 'text-primary-900 bg-primary-50 font-bold'
-                          : 'text-slate-700 hover:text-primary-900 hover:bg-slate-100'
-                      }`;
-                    }}
+                    className={`px-3.5 py-2 rounded-lg text-[15px] min-h-tap flex items-center transition-colors duration-75 ${
+                      active
+                        ? 'text-emerald-950 bg-emerald-100 font-bold'
+                        : 'text-slate-700 hover:text-emerald-950 hover:bg-slate-100 font-medium'
+                    }`}
                   >
                     {link.label}
-                  </NavLink>
+                  </Link>
                 );
               })}
             </nav>
@@ -223,17 +231,24 @@ export default function Header() {
 
         {/* Navigation List */}
         <div className="flex-1 overflow-y-auto px-4 py-4 space-y-1">
-          {NAV_LINKS.map((link) => (
-            <Link
-              key={link.label}
-              to={link.path}
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center justify-between px-4 py-3.5 rounded-xl text-base font-semibold text-slate-800 hover:text-primary-900 hover:bg-primary-50 active:bg-primary-100 transition-colors min-h-tap"
-            >
-              <span>{link.label}</span>
-              <span className="text-slate-400 text-lg">›</span>
-            </Link>
-          ))}
+          {NAV_LINKS.map((link) => {
+            const active = isLinkActive(link.path, location.pathname, location.search);
+            return (
+              <Link
+                key={link.label}
+                to={link.path}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`flex items-center justify-between px-4 py-3.5 rounded-xl text-base min-h-tap transition-colors duration-75 ${
+                  active
+                    ? 'text-emerald-950 bg-emerald-100 font-bold'
+                    : 'text-slate-800 hover:text-emerald-950 hover:bg-slate-50 font-semibold'
+                }`}
+              >
+                <span>{link.label}</span>
+                <span className={`text-lg ${active ? 'text-emerald-750 font-bold' : 'text-slate-400'}`}>›</span>
+              </Link>
+            );
+          })}
 
           <div className="pt-4 border-t border-slate-100 mt-4 text-xs text-slate-500 space-y-2 px-2">
             <p className="flex items-center gap-1.5 font-medium text-slate-700">
