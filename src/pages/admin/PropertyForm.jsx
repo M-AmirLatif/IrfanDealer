@@ -13,7 +13,8 @@ import {
   Loader2, 
   Save, 
   Plus, 
-  DollarSign 
+  DollarSign,
+  Link as LinkIcon
 } from 'lucide-react';
 import { 
   getPropertyBySlug, 
@@ -64,6 +65,9 @@ export default function PropertyForm() {
   const [submitting, setSubmitting] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadingVideo, setUploadingVideo] = useState(false);
+  const [newImageUrl, setNewImageUrl] = useState('');
+  const [newVideoUrl, setNewVideoUrl] = useState('');
+  const [newVideoTitle, setNewVideoTitle] = useState('');
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
@@ -96,8 +100,7 @@ export default function PropertyForm() {
     documents: 'Direct Owner Registry & Intiqal Available',
     coverImage: '',
     images: [],
-    videoUrl: '',
-    videoTitle: '',
+    videos: [], // Multiple videos support: Array<{ url, title, platform }>
     isFeatured: false,
     status: 'available',
   });
@@ -109,6 +112,14 @@ export default function PropertyForm() {
         try {
           const item = await getPropertyBySlug(id);
           if (item) {
+            const rawImages = Array.isArray(item.images) && item.images.length > 0 
+              ? item.images 
+              : (item.coverImage ? [item.coverImage] : []);
+
+            const rawVideos = Array.isArray(item.videos) && item.videos.length > 0
+              ? item.videos
+              : (item.video ? (Array.isArray(item.video) ? item.video : [item.video]) : []);
+
             setFormData({
               title: item.title || '',
               code: item.code || '',
@@ -135,10 +146,9 @@ export default function PropertyForm() {
               condition: item.condition || '',
               amenities: Array.isArray(item.amenities) ? item.amenities : [],
               documents: item.documents || '',
-              coverImage: item.coverImage || '',
-              images: Array.isArray(item.images) ? item.images : [],
-              videoUrl: item.video?.url || '',
-              videoTitle: item.video?.title || '',
+              coverImage: item.coverImage || rawImages[0] || '',
+              images: rawImages,
+              videos: rawVideos,
               isFeatured: Boolean(item.isFeatured),
               status: item.status || 'available',
             });
@@ -172,7 +182,7 @@ export default function PropertyForm() {
     });
   };
 
-  // Multiple Image Upload
+  // Multiple Image Upload via files
   const handleImagesUpload = async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -189,7 +199,6 @@ export default function PropertyForm() {
         return {
           ...prev,
           images: newImages,
-          // Set first uploaded image as cover image if none chosen
           coverImage: prev.coverImage || newImages[0] || '',
         };
       });
@@ -200,6 +209,18 @@ export default function PropertyForm() {
       setUploadingImage(false);
       e.target.value = '';
     }
+  };
+
+  const handleAddImageUrl = (e) => {
+    e.preventDefault();
+    if (!newImageUrl.trim()) return;
+    const url = newImageUrl.trim();
+    setFormData((prev) => ({
+      ...prev,
+      images: [...prev.images, url],
+      coverImage: prev.coverImage || url,
+    }));
+    setNewImageUrl('');
   };
 
   const handleRemoveImage = (indexToRemove) => {
@@ -221,28 +242,72 @@ export default function PropertyForm() {
     setFormData((prev) => ({ ...prev, coverImage: imgUrl }));
   };
 
-  // Video Upload
-  const handleVideoUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  // Multiple Video Upload via files
+  const handleVideosUpload = async (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
 
     setUploadingVideo(true);
     setError('');
 
     try {
-      const videoUrl = await uploadMediaFile(file, 'videos');
+      const uploadPromises = files.map(async (file, i) => {
+        const url = await uploadMediaFile(file, 'videos');
+        const defaultTitle = file.name
+          ? file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
+          : `Walkthrough Video ${formData.videos.length + i + 1}`;
+        return {
+          url,
+          title: defaultTitle,
+          platform: 'direct',
+        };
+      });
+
+      const newVideos = await Promise.all(uploadPromises);
+
       setFormData((prev) => ({
         ...prev,
-        videoUrl,
-        videoTitle: prev.videoTitle || 'Property Walkthrough Video',
+        videos: [...prev.videos, ...newVideos],
       }));
     } catch (err) {
       console.error('Video upload failed:', err);
-      setError('Failed to upload video file (limit 50MB).');
+      setError('Failed to upload video file(s) (limit 50MB each).');
     } finally {
       setUploadingVideo(false);
       e.target.value = '';
     }
+  };
+
+  const handleAddVideoUrl = (e) => {
+    e.preventDefault();
+    if (!newVideoUrl.trim()) return;
+
+    const url = newVideoUrl.trim();
+    const title = newVideoTitle.trim() || `Walkthrough Video ${formData.videos.length + 1}`;
+    const platform = url.includes('youtube') || url.includes('youtu.be') ? 'youtube' : 'direct';
+
+    setFormData((prev) => ({
+      ...prev,
+      videos: [...prev.videos, { url, title, platform }],
+    }));
+
+    setNewVideoUrl('');
+    setNewVideoTitle('');
+  };
+
+  const handleRemoveVideo = (indexToRemove) => {
+    setFormData((prev) => ({
+      ...prev,
+      videos: prev.videos.filter((_, idx) => idx !== indexToRemove),
+    }));
+  };
+
+  const handleVideoTitleChange = (index, title) => {
+    setFormData((prev) => {
+      const updated = [...prev.videos];
+      updated[index] = { ...updated[index], title };
+      return { ...prev, videos: updated };
+    });
   };
 
   // Submit Form
@@ -263,17 +328,7 @@ export default function PropertyForm() {
     setSubmitting(true);
 
     try {
-      // Build size object
       const sizeObj = createSize(Number(formData.sizeValue), formData.sizeUnit);
-
-      // Build video object if provided
-      const videoObj = formData.videoUrl
-        ? {
-            url: formData.videoUrl,
-            title: formData.videoTitle || 'Property Video Walkthrough',
-            platform: formData.videoUrl.includes('youtube') ? 'youtube' : 'direct',
-          }
-        : null;
 
       const payload = {
         title: formData.title.trim(),
@@ -302,7 +357,8 @@ export default function PropertyForm() {
         documents: formData.documents.trim(),
         coverImage: formData.coverImage || formData.images[0] || null,
         images: formData.images,
-        video: videoObj,
+        video: formData.videos[0] || null,
+        videos: formData.videos,
         isFeatured: formData.isFeatured,
         status: formData.status,
         dealerId: 'irfan-umri',
@@ -672,12 +728,12 @@ export default function PropertyForm() {
               4. Property Photos (Multiple Upload)
             </h2>
             <p className="text-xs text-slate-400 mb-4">
-              Upload multiple high-resolution photos of the property. Click the star ⭐ on any photo to set it as the cover image.
+              Select multiple photos at once. Click the star ⭐ on any photo to designate it as the main cover image.
             </p>
 
-            {/* Upload Button */}
-            <div className="flex items-center gap-4 mb-4">
-              <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-sm font-semibold text-white cursor-pointer transition">
+            {/* Photo Upload Controls */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4">
+              <label className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-sm font-semibold text-white cursor-pointer transition">
                 {uploadingImage ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
@@ -686,7 +742,7 @@ export default function PropertyForm() {
                 ) : (
                   <>
                     <Upload className="w-4 h-4 text-emerald-400" />
-                    Select & Upload Photos
+                    Select & Upload Photos (Multiple)
                   </>
                 )}
                 <input
@@ -698,8 +754,28 @@ export default function PropertyForm() {
                   className="hidden"
                 />
               </label>
-              <span className="text-xs text-slate-500">
-                {formData.images.length} photo(s) selected
+
+              {/* Add Photo by URL */}
+              <div className="flex-1 flex gap-2">
+                <input
+                  type="url"
+                  value={newImageUrl}
+                  onChange={(e) => setNewImageUrl(e.target.value)}
+                  placeholder="Or paste image URL (https://...)"
+                  className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleAddImageUrl}
+                  className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition flex items-center gap-1 shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add URL
+                </button>
+              </div>
+
+              <span className="text-xs text-emerald-400 font-bold shrink-0 self-center">
+                {formData.images.length} photo(s) uploaded
               </span>
             </div>
 
@@ -720,7 +796,6 @@ export default function PropertyForm() {
                         alt={`Photo ${idx + 1}`}
                         className="w-full h-full object-cover"
                       />
-                      {/* Action overlays */}
                       <div className="absolute inset-0 bg-slate-950/60 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-2">
                         <button
                           type="button"
@@ -753,72 +828,126 @@ export default function PropertyForm() {
             )}
           </div>
 
-          {/* Section 5: Video Walkthrough */}
+          {/* Section 5: Multiple Video Walkthroughs */}
           <div className="pt-6 border-t border-slate-800">
             <h2 className="text-sm font-bold text-emerald-400 uppercase tracking-wider mb-2 flex items-center gap-2">
               <Video className="w-4 h-4" />
-              5. Video Walkthrough (File Upload or URL)
+              5. Video Walkthroughs (Multiple Videos Upload)
             </h2>
             <p className="text-xs text-slate-400 mb-4">
-              Showcase a video tour of the property. Upload an MP4 video or paste a YouTube video link.
+              Upload multiple video files (MP4/WebM) or add multiple YouTube walkthrough links with custom labels.
             </p>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Upload Video File (MP4/WebM)
-                </label>
-                <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-semibold text-white cursor-pointer transition w-full justify-center">
-                  {uploadingVideo ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
-                      Uploading video...
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="w-4 h-4 text-emerald-400" />
-                      Select Video File (up to 50MB)
-                    </>
-                  )}
-                  <input
-                    type="file"
-                    accept="video/mp4,video/webm,video/quicktime"
-                    disabled={uploadingVideo}
-                    onChange={handleVideoUpload}
-                    className="hidden"
-                  />
-                </label>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-300 mb-1">
-                  Or Paste Video Link (YouTube / Direct MP4)
-                </label>
-                <input
-                  type="text"
-                  value={formData.videoUrl}
-                  onChange={(e) => handleChange('videoUrl', e.target.value)}
-                  placeholder="https://www.youtube.com/watch?v=... or .mp4"
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-750 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
-                />
-              </div>
-            </div>
-
-            {formData.videoUrl && (
-              <div className="mt-3 p-3 bg-slate-950 border border-slate-800 rounded-xl flex items-center justify-between">
-                <div className="flex items-center gap-2 text-xs text-slate-300 truncate">
-                  <Video className="w-4 h-4 text-emerald-400 flex-shrink-0" />
-                  <span className="truncate">{formData.videoUrl}</span>
+            <div className="space-y-4">
+              {/* Video Upload Controls */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* File Upload (Multiple) */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Upload Video File(s)
+                  </label>
+                  <label className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-xs font-semibold text-white cursor-pointer transition w-full justify-center">
+                    {uploadingVideo ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin text-emerald-400" />
+                        Uploading video(s)...
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="w-4 h-4 text-emerald-400" />
+                        Select Videos (Multiple, up to 50MB each)
+                      </>
+                    )}
+                    <input
+                      type="file"
+                      multiple
+                      accept="video/mp4,video/webm,video/quicktime"
+                      disabled={uploadingVideo}
+                      onChange={handleVideosUpload}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleChange('videoUrl', '')}
-                  className="text-xs text-red-400 hover:underline font-semibold ml-2"
-                >
-                  Remove Video
-                </button>
+
+                {/* Add External Video Link */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-300 mb-1">
+                    Or Add YouTube / MP4 Link
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={newVideoTitle}
+                      onChange={(e) => setNewVideoTitle(e.target.value)}
+                      placeholder="Title (e.g. Ground Floor)"
+                      className="w-1/3 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    />
+                    <input
+                      type="text"
+                      value={newVideoUrl}
+                      onChange={(e) => setNewVideoUrl(e.target.value)}
+                      placeholder="https://youtube.com/watch?v=..."
+                      className="flex-1 px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddVideoUrl}
+                      className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition flex items-center gap-1 shrink-0"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                      Add
+                    </button>
+                  </div>
+                </div>
               </div>
-            )}
+
+              {/* Videos List */}
+              {formData.videos.length > 0 && (
+                <div className="space-y-2 p-3 bg-slate-950 border border-slate-800 rounded-xl">
+                  <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider mb-2">
+                    {formData.videos.length} Video(s) Configured
+                  </div>
+                  {formData.videos.map((vid, idx) => (
+                    <div
+                      key={idx}
+                      className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg"
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-red-500/10 border border-red-500/20 flex items-center justify-center text-red-400 shrink-0">
+                          <Video className="w-4 h-4" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <input
+                            type="text"
+                            value={vid.title || ''}
+                            onChange={(e) => handleVideoTitleChange(idx, e.target.value)}
+                            placeholder="Video label (e.g. Full Walkthrough)"
+                            className="bg-transparent border-b border-slate-750 text-xs font-semibold text-white focus:outline-none focus:border-emerald-500 w-full"
+                          />
+                          <p className="text-[11px] text-slate-400 truncate mt-0.5">
+                            {vid.url}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 self-end sm:self-center">
+                        <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded bg-slate-800 text-slate-300">
+                          {vid.platform === 'youtube' ? 'YouTube' : 'Direct MP4'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveVideo(idx)}
+                          className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition"
+                          title="Remove Video"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Section 6: Amenities */}

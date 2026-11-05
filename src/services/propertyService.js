@@ -44,7 +44,10 @@ export function mapDbToProperty(row) {
     documents: row.documents,
     coverImage: row.cover_image,
     images: Array.isArray(row.images) ? row.images : [],
-    video: row.video,
+    video: Array.isArray(row.video) ? row.video[0] : row.video,
+    videos: Array.isArray(row.video)
+      ? row.video
+      : (row.video && row.video.url ? [row.video] : []),
     isFeatured: Boolean(row.is_featured),
     status: row.status || 'available',
     dealerId: row.dealer_id || 'irfan-umri',
@@ -88,7 +91,9 @@ export function mapPropertyToDb(p) {
     documents: p.documents || null,
     cover_image: p.coverImage || null,
     images: Array.isArray(p.images) ? p.images : [],
-    video: p.video || null,
+    video: Array.isArray(p.videos) && p.videos.length > 0
+      ? p.videos
+      : (p.video ? (Array.isArray(p.video) ? p.video : [p.video]) : []),
     is_featured: Boolean(p.isFeatured),
     status: p.status || 'available',
     dealer_id: p.dealerId || 'irfan-umri',

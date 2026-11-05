@@ -1,12 +1,28 @@
 import React, { useState } from 'react';
 import { Play } from 'lucide-react';
 
+function getYouTubeEmbedUrl(url) {
+  if (!url) return '';
+  if (!url.includes('http') && url.length === 11) {
+    return `https://www.youtube-nocookie.com/embed/${url}?autoplay=1&rel=0`;
+  }
+  const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([\w-]{11})/);
+  const id = match ? match[1] : url;
+  return `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&rel=0`;
+}
+
 export default function VideoPlayer({ video, className = '' }) {
   const [isPlaying, setIsPlaying] = useState(false);
 
-  if (!video) return null;
+  if (!video || !video.url) return null;
 
-  const isYouTube = video.type === 'youtube';
+  const isYouTube =
+    video.type === 'youtube' ||
+    video.platform === 'youtube' ||
+    video.url.includes('youtube') ||
+    video.url.includes('youtu.be');
+
+  const embedUrl = isYouTube ? getYouTubeEmbedUrl(video.url) : '';
 
   return (
     <div
@@ -34,14 +50,14 @@ export default function VideoPlayer({ video, className = '' }) {
               <Play className="w-8 h-8 text-white fill-white ml-1" />
             </div>
             <span className="text-xs sm:text-sm font-bold tracking-wider bg-black/60 px-3 py-1 rounded-full uppercase backdrop-blur-xs">
-              Watch Video Walkthrough
+              {video.title || 'Watch Video Walkthrough'}
             </span>
           </div>
         </div>
       ) : isYouTube ? (
         <iframe
-          src={`https://www.youtube-nocookie.com/embed/${video.url}?autoplay=1&rel=0`}
-          title="Property Walkthrough Video"
+          src={embedUrl}
+          title={video.title || 'Property Walkthrough Video'}
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           allowFullScreen
           className="w-full h-full border-0"

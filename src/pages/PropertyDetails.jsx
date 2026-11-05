@@ -134,7 +134,12 @@ export default function PropertyDetails() {
         />
 
         {/* 2. GALLERY & MEDIA */}
-        <PropertyGallery images={property.images} video={property.video} coverImage={property.coverImage} />
+        <PropertyGallery
+          images={property.images}
+          video={property.video}
+          videos={property.videos}
+          coverImage={property.coverImage}
+        />
 
         {/* MAIN 2-COLUMN LAYOUT */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 pt-2">

@@ -3,15 +3,16 @@ import { Camera, Video as VideoIcon, Maximize2, ChevronLeft, ChevronRight } from
 import Lightbox from './Lightbox';
 import VideoPlayer from './VideoPlayer';
 
-export default function PropertyGallery({ images = [], video = null, coverImage = '', className = '' }) {
+export default function PropertyGallery({ images = [], video = null, videos = [], coverImage = '', className = '' }) {
   const [activeMedia, setActiveMedia] = useState('photos'); // 'photos' | 'video'
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [activeVideoIndex, setActiveVideoIndex] = useState(0);
   const [lightboxOpen, setLightboxOpen] = useState(false);
 
   const touchStartX = useRef(0);
   const touchEndX = useRef(0);
 
-  // Normalize images: supports both string URLs and { url, alt } objects, plus coverImage fallback
+  // Normalize images
   const rawList = Array.isArray(images) && images.length > 0 
     ? images 
     : (coverImage ? [coverImage] : []);
@@ -32,6 +33,16 @@ export default function PropertyGallery({ images = [], video = null, coverImage 
   const safeImages = normalizedImages.length > 0 
     ? normalizedImages 
     : [{ url: '/placeholder-house.webp', alt: 'Property preview photo' }];
+
+  // Normalize videos: supports both multiple videos array and single video object
+  const allVideos = (
+    Array.isArray(videos) && videos.length > 0
+      ? videos
+      : (Array.isArray(video) ? video : (video && video.url ? [video] : []))
+  ).filter((v) => Boolean(v && v.url));
+
+  const hasVideos = allVideos.length > 0;
+  const currentVideo = allVideos[activeVideoIndex] || allVideos[0];
 
   const handleNext = () => {
     setActiveImageIndex((prev) => (prev === safeImages.length - 1 ? 0 : prev + 1));
@@ -62,8 +73,8 @@ export default function PropertyGallery({ images = [], video = null, coverImage 
   return (
     <div className={`space-y-3 ${className}`}>
       {/* Media Type Toggle when video exists */}
-      {video && (
-        <div className="flex items-center gap-2 mb-1">
+      {hasVideos && (
+        <div className="flex items-center gap-2 mb-1 flex-wrap">
           <button
             type="button"
             onClick={() => setActiveMedia('photos')}
@@ -87,14 +98,40 @@ export default function PropertyGallery({ images = [], video = null, coverImage 
             }`}
           >
             <VideoIcon className="w-4 h-4 text-red-500" />
-            <span>Video Walkthrough</span>
+            <span>{allVideos.length > 1 ? `Videos (${allVideos.length})` : 'Video Walkthrough'}</span>
           </button>
         </div>
       )}
 
       {/* Main Preview Container */}
-      {activeMedia === 'video' && video ? (
-        <VideoPlayer video={video} />
+      {activeMedia === 'video' && hasVideos ? (
+        <div className="space-y-3">
+          <VideoPlayer video={currentVideo} />
+
+          {/* Multiple Videos Selector Strip */}
+          {allVideos.length > 1 && (
+            <div className="flex items-center gap-2 overflow-x-auto py-1">
+              <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider shrink-0 mr-1">
+                Playlist:
+              </span>
+              {allVideos.map((v, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setActiveVideoIndex(i)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shrink-0 border ${
+                    i === activeVideoIndex
+                      ? 'bg-primary-900 text-white border-primary-900 shadow-sm'
+                      : 'bg-white text-slate-700 border-slate-250 hover:bg-slate-100'
+                  }`}
+                >
+                  <VideoIcon className="w-3.5 h-3.5 text-red-500" />
+                  <span>{v.title || `Video ${i + 1}`}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
       ) : (
         <div className="space-y-3">
           <div
