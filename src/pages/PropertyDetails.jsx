@@ -25,7 +25,7 @@ import PriceTag from '../components/property/PriceTag';
 import Badge from '../components/ui/Badge';
 import Button from '../components/ui/Button';
 import { SkeletonPropertyCard } from '../components/ui/Skeleton';
-import { getPropertyBySlug, getSimilarProperties } from '../services/propertyService';
+import { getPropertyBySlug, getSimilarProperties, incrementPropertyViews } from '../services/propertyService';
 import { getDealerByIdSync } from '../services/dealerService';
 import { AREAS } from '../data/areas';
 import { formatPrice, formatPriceFull } from '../utils/formatPrice';
@@ -47,6 +47,7 @@ export default function PropertyDetails() {
         setProperty(item);
 
         if (item) {
+          incrementPropertyViews(item.id);
           const similar = await getSimilarProperties(item, 3);
           setSimilarProps(similar);
         }

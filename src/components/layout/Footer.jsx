@@ -146,6 +146,9 @@ export default function Footer() {
             <Link to="/dealers" className="hover:text-white transition-colors">
               Authorized Dealers
             </Link>
+            <Link to="/admin" className="text-slate-500 hover:text-emerald-400 transition-colors flex items-center gap-1">
+              Dealer Portal
+            </Link>
           </div>
         </div>
       </div>

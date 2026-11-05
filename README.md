@@ -265,7 +265,29 @@ To activate multi-dealer mode:
 
 ---
 
-## 7. Future Backend Migration Roadmap
+## 7. Dealer Admin Panel & Supabase Backend
+
+Umri Properties is integrated with **Supabase (PostgreSQL + Auth + Storage)** providing a dedicated, single-dealer management panel for **Irfan Umri**:
+
+- **Portal URL**: `/admin` (or `/admin/login`)
+- **Dealer Credentials**:
+  - Email: `irfan@umriproperties.pk`
+  - Default Password: `UmriProperties2026!` (changeable in Supabase Auth)
+- **Dealer Capabilities**:
+  - **Upload New Listings**: Add properties for both Sale and Rent with full specifications, custom code, Lakh/Crore preview, Pakistani land units (Marla/Kanal/Sq Ft), and amenities.
+  - **Multi-Photo & Video Upload**: Directly uploads multiple high-res photos and video walkthroughs (.mp4/.webm or YouTube links) into Supabase's `property-media` cloud storage bucket.
+  - **Live Cover Photo Selection**: Click the star ⭐ on any uploaded photo to set it as the cover image.
+  - **Edit & Update**: Update prices, change descriptions, modify amenities, or toggle "Featured on Homepage".
+  - **Quick Status Control**: Switch status between `Available`, `Under Offer (Biana)`, `Sold`, `Rented`, or `Inactive (Draft)`.
+  - **Delete Listings**: Permanently remove listings with confirmation dialog.
+- **Public Visitors**:
+  - Regular website visitors do not need to register or log in. All published listings are publicly accessible via Supabase Row-Level Security (RLS).
+  - Viewing listings increments the view counter in real-time.
+  - Offline fallback: If network connection to Supabase is unavailable, the site gracefully falls back to static dataset without breaking.
+
+---
+
+## 8. Deployment Guide
 
 The application architecture is explicitly prepared for an easy transition to a full backend (FastAPI / Node.js / Laravel / Django) with zero UI rewriting:
 
